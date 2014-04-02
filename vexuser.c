@@ -9,11 +9,8 @@ void setIntake(int speed);
 void setPneumatic(int value);
 void setArm(int value);
 int motorOn;
-int intakeUp;
-<<<<<<< HEAD
-=======
+int intakeUp = 0;
 int shooting;
->>>>>>> 2d477bc946a26317e5f8b8d8c23dcb64364817c1
 
 static vexDigiCfg dConfig[kVexDigital_Num] = {
   { kVexDigital_1,    kVexSensorDigitalOutput, kVexConfigOutput,      0 },
@@ -73,20 +70,18 @@ msg_t vexOperator(void *arg) {
   (void)arg;
   vexTaskRegister("operator");
 
-  int buttonPressed = 0;
   int armPress = 0;
   int shotPress = 0;
+  int intakePress = 0;
 
   while (!chThdShouldTerminate()) {
-    //toggle shooter motor
-    if(!buttonPressed && vexControllerGet(Btn8U))
-      setShooter(motorOn ? 0 : 127);
-    buttonPressed = vexControllerGet(Btn8U);
 
-    //joystick motor control
-    if(abs(vexControllerGet(Ch3)) > 15)
+    //joystick and button motor control
+    if(vexControllerGet(Btn8U))
+      setShooter(127);
+    else if(abs(vexControllerGet(Ch3)) > 15)
       setShooter(vexControllerGet(Ch3));
-    else if(vexControllerGet(Btn7U))
+    else
       setShooter(0);
 
     // toggle shooter pneumatic
@@ -99,6 +94,8 @@ msg_t vexOperator(void *arg) {
       setIntake(127);
     else if(vexControllerGet(Btn8D))
       setIntake(-127);
+    else if(vexControllerGet(Btn6U))
+      setIntake(127);
     else if(abs(vexControllerGet(Ch2)) <= 15)
       setIntake(0);//deadzone
     else
@@ -108,8 +105,15 @@ msg_t vexOperator(void *arg) {
     if(!armPress && vexControllerGet(Btn5U)){
       setArm(intakeUp ? kVexDigitalLow : kVexDigitalHigh);
       intakeUp = !intakeUp;
+    }else if(!intakePress && vexControllerGet(Btn6U)){
+      setArm(kVexDigitalHigh);
+      intakeUp = true;
+    }else if(intakePress && !vexControllerGet(Btn6U)){
+      setArm(kVexDigitalLow);
+      intakeUp = false;
     }
-    armPress = vexControllerGet(Btn6U);
+    armPress = vexControllerGet(Btn5U);
+    intakePress = vexControllerGet(Btn6U);
 
     vexSleep(20);//don't starve other threads
   }
@@ -131,11 +135,6 @@ void setIntake(int speed){
 void setPneumatic(int value){
   vexDigitalPinSet(relay, value);
   shooting = value == kVexDigitalHigh;
-}
-
-// sets the state of the intake arm
-void setArm(int value){
-  vexDigitalPinSet(arm,value);
 }
 
 // sets the state of the intake arm
